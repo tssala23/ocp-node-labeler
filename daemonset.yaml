@@ -14,9 +14,13 @@ spec:
           args:
             - |
               while true; do
-                PRODUCT_NAME=$(cat /sys/devices/virtual/dmi/id/product_name | tr ' ' '_')
-                oc label node "$NODE_NAME" "feature.node.kubernetes.io/custom.dmi_product_name=$PRODUCT_NAME" --overwrite
-                sleep 3600
+                cd /sys/devices/virtual/dmi/id || exit 1
+                for file in $(grep -l . * 2>/dev/null); do
+                value=$(<"$file" tr -c 'a-zA-Z0-9' '_' | sed 's/_*$//')
+                varname="${file//[^a-zA-Z0-9_]/_}"
+                declare "$varname=$value"
+                oc label node "$NODE_NAME" "feature.node.kubernetes.io/custom.dmi_$varname=$value" --overwrite
+                sleep 86400
               done
           env:
             - name: NODE_NAME
